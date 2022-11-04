@@ -3,6 +3,7 @@ import dataclasses
 import functools
 import itertools
 import logging
+import math
 import re
 import textwrap
 from collections import OrderedDict
@@ -1252,8 +1253,21 @@ class View(BaseView):
         size_hint = V.graph.sizevars.size_hint
         vars = [sympy_symbol(f"view{i}") for i in range(len(new_size))]
 
-        stack_new = list(zip(vars, new_size))
-        stack_old = list(old_size)
+        def any0(l):
+            return any([size_hint(x) for x in list(l)])
+
+        if any0(old_size) or any0(new_size):
+            assert any0(old_size) and any0(new_size)
+            view_expr = [sympy.Integer(0)] * len(old_size)
+            stack_new = []
+            stack_old = []
+            numel = math.prod(vars, start=sympy.Integer(1))
+            # this is wrong as sympy_symbol is always positive
+            V.graph.sizevars.guard_equals(numel, sympy.Integer(0))
+        else:
+            view_expr = []
+            stack_new = list(zip(vars, new_size))
+            stack_old = list(old_size)
 
         view_expr = []
         while stack_new and stack_old:
