@@ -46,8 +46,7 @@ int get_device_id() {
 /// rare enough that the defensive
 /// We need our own implementation of this function to prevent
 /// an infinite initialization loop for CUDAKernelLaunchRegistry
-int CUDAKernelLaunchRegistry::get_device_compute_capability(
-    const int device_num) {
+int get_device_compute_capability(const int device_num) {
   int compute_capability = -1;
   C10_CUDA_ERROR_HANDLED(cudaDeviceGetAttribute(
       &compute_capability, cudaDevAttrComputeCapabilityMajor, device_num));
@@ -84,9 +83,7 @@ void uvm_deleter(DeviceAssertionsData* uvm_assertions_ptr) {
   }
 }
 
-}
-
-
+} // namespace
 
 /// Check that kernels ran correctly by checking the message buffer. BLOCKING.
 std::string c10_retrieve_device_side_assertion_info() {
@@ -118,13 +115,13 @@ std::string c10_retrieve_device_side_assertion_info() {
     oss << "This process interacted the following GPUs = {";
     bool first_gpu_listed = true;
     for (const auto& x : uvm_assertions) {
-        if (x) {
-            if(!first_gpu_listed){
-                oss<<","
-            }
-            first_gpu_listed = true;
-            oss<<x;
+      if (x) {
+        if (!first_gpu_listed) {
+          oss << ","
         }
+        first_gpu_listed = true;
+        oss << x;
+      }
     }
     oss << "}" << std::endl;
   }
@@ -336,7 +333,6 @@ DeviceAssertionsData* CUDAKernelLaunchRegistry::
   return nullptr;
 #endif
 }
-
 
 CUDAKernelLaunchRegistry& CUDAKernelLaunchRegistry::get_singleton_ref() {
   static CUDAKernelLaunchRegistry launch_registry;
