@@ -1,5 +1,7 @@
 #pragma once
 
+#include <c10/cuda/CUDAMacros.h>
+
 #include <memory>
 #include <mutex>
 #include <string>
