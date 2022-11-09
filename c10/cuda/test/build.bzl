@@ -37,6 +37,6 @@ def define_targets(rules):
         rules.cc_test(
             name = "test_" + name,
             deps = [
-                ":test_" + name + "_lib"
-            ]
+                ":test_" + name + "_lib",
+            ],
         )
