@@ -140,6 +140,8 @@ class C10_CUDA_API CUDAKernelLaunchRegistry {
   bool is_enabled() const;
 };
 
+std::string c10_retrieve_device_side_assertion_info();
+
 } // namespace cuda
 } // namespace c10
 
