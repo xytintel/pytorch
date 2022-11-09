@@ -29,31 +29,6 @@ int dsa_get_device_count() {
   return device_count;
 }
 
-/// Get current device id
-/// We need our own implementation of this function to prevent
-/// an infinite initialization loop for CUDAKernelLaunchRegistry
-int dsa_get_device_id() {
-  int device = -1;
-  C10_CUDA_ERROR_HANDLED(cudaGetDevice(&device));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
-  return device;
-}
-
-/// Get a device's compute capability - note that this dangerously assumes
-/// that if one CUDA GPU supports device-side assertions they all do. This is
-/// probably fine since the latest CUDA GPU that doesn't support UVM is the
-/// K80 released 2014-11-17. Mixing that GPU with a newer one is likely to be
-/// rare enough that the defensive
-/// We need our own implementation of this function to prevent
-/// an infinite initialization loop for CUDAKernelLaunchRegistry
-int dsa_get_device_compute_capability(const int device_num) {
-  int compute_capability = -1;
-  C10_CUDA_ERROR_HANDLED(cudaDeviceGetAttribute(
-      &compute_capability, cudaDevAttrComputeCapabilityMajor, device_num));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
-  return compute_capability;
-}
-
 bool dsa_check_if_all_devices_support_managed_memory() {
 // It looks as though this'll work best on CUDA GPUs with Pascal
 // architectures or newer, per
@@ -82,6 +57,33 @@ void uvm_deleter(DeviceAssertionsData* uvm_assertions_ptr) {
     C10_CUDA_IGNORE_ERROR(cudaFree(uvm_assertions_ptr));
   }
 }
+
+#ifdef TORCH_USE_CUDA_DSA
+/// Get current device id
+/// We need our own implementation of this function to prevent
+/// an infinite initialization loop for CUDAKernelLaunchRegistry
+int dsa_get_device_id() {
+  int device = -1;
+  C10_CUDA_ERROR_HANDLED(cudaGetDevice(&device));
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  return device;
+}
+
+/// Get a device's compute capability - note that this dangerously assumes
+/// that if one CUDA GPU supports device-side assertions they all do. This is
+/// probably fine since the latest CUDA GPU that doesn't support UVM is the
+/// K80 released 2014-11-17. Mixing that GPU with a newer one is likely to be
+/// rare enough that the defensive
+/// We need our own implementation of this function to prevent
+/// an infinite initialization loop for CUDAKernelLaunchRegistry
+int dsa_get_device_compute_capability(const int device_num) {
+  int compute_capability = -1;
+  C10_CUDA_ERROR_HANDLED(cudaDeviceGetAttribute(
+      &compute_capability, cudaDevAttrComputeCapabilityMajor, device_num));
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  return compute_capability;
+}
+#endif
 
 } // namespace
 
