@@ -22,7 +22,7 @@ namespace {
 /// Get the number of CUDA devices
 /// We need our own implementation of this function to prevent
 /// an infinite initialization loop for CUDAKernelLaunchRegistry
-int get_device_count() {
+int dsa_get_device_count() {
   int device_count = -1;
   C10_CUDA_ERROR_HANDLED(cudaGetDeviceCount(&device_count));
   CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
@@ -32,7 +32,7 @@ int get_device_count() {
 /// Get current device id
 /// We need our own implementation of this function to prevent
 /// an infinite initialization loop for CUDAKernelLaunchRegistry
-int get_device_id() {
+int dsa_get_device_id() {
   int device = -1;
   C10_CUDA_ERROR_HANDLED(cudaGetDevice(&device));
   CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
@@ -46,7 +46,7 @@ int get_device_id() {
 /// rare enough that the defensive
 /// We need our own implementation of this function to prevent
 /// an infinite initialization loop for CUDAKernelLaunchRegistry
-int get_device_compute_capability(const int device_num) {
+int dsa_get_device_compute_capability(const int device_num) {
   int compute_capability = -1;
   C10_CUDA_ERROR_HANDLED(cudaDeviceGetAttribute(
       &compute_capability, cudaDevAttrComputeCapabilityMajor, device_num));
@@ -54,13 +54,13 @@ int get_device_compute_capability(const int device_num) {
   return compute_capability;
 }
 
-bool check_if_all_devices_support_managed_memory() {
+bool dsa_check_if_all_devices_support_managed_memory() {
 // It looks as though this'll work best on CUDA GPUs with Pascal
 // architectures or newer, per
 // https://developer.nvidia.com/blog/unified-memory-cuda-beginners/
 #ifdef TORCH_USE_CUDA_DSA
-  for (const auto i : c10::irange(get_device_count())) {
-    if (get_device_compute_capability(i) < 6) {
+  for (const auto i : c10::irange(dsa_get_device_count())) {
+    if (dsa_get_device_compute_capability(i) < 6) {
       return false;
     }
   }
@@ -196,10 +196,10 @@ std::string c10_retrieve_device_side_assertion_info() {
 
 CUDAKernelLaunchRegistry::CUDAKernelLaunchRegistry()
     : do_all_devices_support_managed_memory(
-          check_if_all_devices_support_managed_memory()),
+          dsa_check_if_all_devices_support_managed_memory()),
       gather_launch_stacktrace(check_env_for_enable_launch_stacktracing()),
       enabled(check_env_for_dsa_enabled()) {
-  for (C10_UNUSED const auto _ : c10::irange(get_device_count())) {
+  for (C10_UNUSED const auto _ : c10::irange(dsa_get_device_count())) {
     uvm_assertions.emplace_back(nullptr, uvm_deleter);
   }
 
@@ -239,7 +239,7 @@ uint32_t CUDAKernelLaunchRegistry::insert(
       launch_linenum,
       backtrace,
       kernel_name,
-      get_device_id(),
+      dsa_get_device_id(),
       stream_id,
       my_gen_number};
   return my_gen_number;
@@ -274,7 +274,7 @@ DeviceAssertionsData* CUDAKernelLaunchRegistry::
     return nullptr;
   }
 
-  const auto device_num = get_device_id();
+  const auto device_num = dsa_get_device_id();
 
   // If we've already set up this GPU with managed memory, return a pointer to
   // the managed memory. This is a lock-free quick-return path.
