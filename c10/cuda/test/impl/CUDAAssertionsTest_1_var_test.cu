@@ -93,6 +93,8 @@ void cuda_device_assertions_1_var_test() {
 TEST(CUDATest, cuda_device_assertions_1_var_test) {
 #ifdef TORCH_USE_CUDA_DSA
   c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref().enabled = true;
+  std::cerr << "BEFORE TEST" << std::endl;
+  did_not_fail_diagnostics();
   cuda_device_assertions_1_var_test();
 #else
   GTEST_SKIP() << "CUDA device-side assertions (DSA) was not enabled.";
