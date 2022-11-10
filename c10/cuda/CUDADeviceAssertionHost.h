@@ -133,7 +133,7 @@ class C10_CUDA_API CUDAKernelLaunchRegistry {
   /// Whether or not host-side DSA is enabled or disabled at run-time
   /// Device-side code cannot be adjusted at run-time
   bool enabled = false;
-  /// Whether or not the device has indicated a failure
+  /// Whether or not a device has indicated a failure
   bool has_failed() const;
   /// Since multiple mechanisms can enable/disable, we add a function that
   /// aggregates them

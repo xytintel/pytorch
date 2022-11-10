@@ -13,6 +13,28 @@
 
 using ::testing::HasSubstr;
 
+void did_not_fail_diagnostics() {
+#ifdef TORCH_USE_CUDA_DSA
+  std::cerr << "DSA was enabled" << std::endl;
+#else
+  std::cerr << "DSA was not enabled" << std::endl;
+#endif
+
+  std::cerr
+      << "c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref().enabled = "
+      << c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref().enabled
+      << std::endl;
+  std::cerr
+      << "c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref().is_enabled() = "
+      << c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref().is_enabled()
+      << std::endl;
+  std::cerr
+      << "c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref().do_all_devices_support_managed_memory = "
+      << c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref()
+             .do_all_devices_support_managed_memory
+      << std::endl;
+}
+
 /**
  * Device kernel that takes a single integer parameter as argument and
  * will always trigger a device side assertion.
@@ -39,6 +61,7 @@ void cuda_device_assertions_1_var_test() {
 
   try {
     c10::cuda::device_synchronize();
+    did_not_fail_diagnostics();
     throw std::runtime_error("Test didn't fail, but should have.");
   } catch (const c10::Error& err) {
     const auto err_str = std::string(err.what());
