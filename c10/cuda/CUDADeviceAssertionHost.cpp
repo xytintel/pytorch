@@ -5,6 +5,7 @@
 #include <cuda_runtime.h>
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
