@@ -13,7 +13,7 @@
 #include <string>
 #include <thread>
 
-#define CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS \
+#define CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS() \
   c10_cuda_check_implementation(__FILE__, __FUNCTION__, __LINE__, false)
 
 namespace c10 {
@@ -27,7 +27,7 @@ namespace {
 int dsa_get_device_count() {
   int device_count = -1;
   C10_CUDA_ERROR_HANDLED(cudaGetDeviceCount(&device_count));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS();
   return device_count;
 }
 
@@ -67,7 +67,7 @@ void uvm_deleter(DeviceAssertionsData* uvm_assertions_ptr) {
 int dsa_get_device_id() {
   int device = -1;
   C10_CUDA_ERROR_HANDLED(cudaGetDevice(&device));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS();
   return device;
 }
 
@@ -82,7 +82,7 @@ int dsa_get_device_compute_capability(const int device_num) {
   int compute_capability = -1;
   C10_CUDA_ERROR_HANDLED(cudaDeviceGetAttribute(
       &compute_capability, cudaDevAttrComputeCapabilityMajor, device_num));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS();
   return compute_capability;
 }
 #endif
@@ -303,14 +303,14 @@ DeviceAssertionsData* CUDAKernelLaunchRegistry::
 
   C10_CUDA_ERROR_HANDLED(
       cudaMallocManaged(&uvm_assertions_ptr, sizeof(DeviceAssertionsData)));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS();
 
   C10_CUDA_ERROR_HANDLED(cudaMemAdvise(
       uvm_assertions_ptr,
       sizeof(DeviceAssertionsData),
       cudaMemAdviseSetPreferredLocation,
       cudaCpuDeviceId));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS();
 
   // GPU will establish direct mapping of data in CPU memory, no page faults
   // will be generated
@@ -319,7 +319,7 @@ DeviceAssertionsData* CUDAKernelLaunchRegistry::
       sizeof(DeviceAssertionsData),
       cudaMemAdviseSetAccessedBy,
       cudaCpuDeviceId));
-  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS;
+  CHECK_CUDA_API_CALL_WITHOUT_CHECKING_DEVICE_ASSERTS();
 
   // Initialize the memory from the CPU; otherwise, pages may have to be created
   // on demand. We think that UVM documentation indicates that first access may
