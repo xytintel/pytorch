@@ -1,6 +1,5 @@
 #pragma once
 
-#include <c10/cuda/CUDAException.h>
 #include <c10/cuda/CUDAMacros.h>
 
 #include <memory>
@@ -144,21 +143,6 @@ std::string c10_retrieve_device_side_assertion_info();
 
 } // namespace cuda
 } // namespace c10
-
-/// Launches a CUDA kernel appending to it all the information need to handle
-/// device-side assertion failures. Checks that the launch was successful.
-#define TORCH_DSA_KERNEL_LAUNCH(                                      \
-    kernel, blocks, threads, shared_mem, stream, ...)                 \
-  do {                                                                \
-    auto& launch_registry =                                           \
-        c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref();     \
-    kernel<<<blocks, threads, shared_mem, stream>>>(                  \
-        __VA_ARGS__,                                                  \
-        launch_registry.get_uvm_assertions_ptr_for_current_device(),  \
-        launch_registry.insert(                                       \
-            __FILE__, __FUNCTION__, __LINE__, #kernel, stream.id())); \
-    C10_CUDA_KERNEL_LAUNCH_CHECK();                                   \
-  } while (0)
 
 // Each kernel launched with TORCH_DSA_KERNEL_LAUNCH
 // requires the same input arguments. We introduce the following macro to

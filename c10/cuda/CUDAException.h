@@ -72,6 +72,21 @@ class C10_CUDA_API CUDAError : public c10::Error {
 // diagnostic if it didn't.
 #define C10_CUDA_KERNEL_LAUNCH_CHECK() C10_CUDA_CHECK(cudaGetLastError())
 
+/// Launches a CUDA kernel appending to it all the information need to handle
+/// device-side assertion failures. Checks that the launch was successful.
+#define TORCH_DSA_KERNEL_LAUNCH(                                      \
+    kernel, blocks, threads, shared_mem, stream, ...)                 \
+  do {                                                                \
+    auto& launch_registry =                                           \
+        c10::cuda::CUDAKernelLaunchRegistry::get_singleton_ref();     \
+    kernel<<<blocks, threads, shared_mem, stream>>>(                  \
+        __VA_ARGS__,                                                  \
+        launch_registry.get_uvm_assertions_ptr_for_current_device(),  \
+        launch_registry.insert(                                       \
+            __FILE__, __FUNCTION__, __LINE__, #kernel, stream.id())); \
+    C10_CUDA_KERNEL_LAUNCH_CHECK();                                   \
+  } while (0)
+
 namespace c10 {
 namespace cuda {
 
