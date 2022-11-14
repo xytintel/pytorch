@@ -1,4 +1,5 @@
 #include <c10/cuda/CUDADeviceAssertionHost.h>
+#include <c10/cuda/CUDAException.h>
 #include <c10/util/Backtrace.h>
 #include <c10/util/Exception.h>
 #include <c10/util/irange.h>
