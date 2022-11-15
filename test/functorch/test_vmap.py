@@ -3902,6 +3902,7 @@ class TestVmapOperatorsOpInfo(TestCase):
 
     def test_vmap_escaped_error(self):
         escaped = None
+
         def f(x):
             nonlocal escaped
             escaped = x
@@ -3915,6 +3916,7 @@ class TestVmapOperatorsOpInfo(TestCase):
 
     def test_vmap_escaped_error_boxed(self):
         escaped = None
+
         def f(x):
             nonlocal escaped
             escaped = x
