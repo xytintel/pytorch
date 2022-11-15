@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#ifdef CUDART_VERSION
+#ifdef USE_CUDA
 #define TORCH_USE_CUDA_DSA
 #endif
 
