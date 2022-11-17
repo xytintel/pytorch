@@ -17,7 +17,7 @@ load(
     "aten_cpu_source_list",
     "aten_native_source_list",
     "core_sources_common",
-    "core_sources_full_mobile_no_backend_interface",
+    "core_sources_full_mobile_no_backend_interface_xplat",
     "core_trainer_sources",
     "jit_core_headers",
     "jit_core_sources",
@@ -721,7 +721,6 @@ def get_pt_operator_registry_dict(
         template_select = True,
         enforce_traced_op_list = False,
         pt_allow_forced_schema_registration = True,
-        enable_flatbuffer = False,
         **kwargs):
     code_gen_files = pt_operator_query_codegen(
         name,
@@ -754,14 +753,13 @@ def get_pt_operator_registry_dict(
             "pt_operator_registry",
         ],
         deps = [
-                   # need absolute path here
-                   ROOT + ":torch_mobile_core",
-                   ROOT + ":aten_cpu",
-                   ROOT + ":aten_metal_prepack_header",
-                   third_party("glog"),
-                   C10,
-               ] + ([ROOT + ":torch_mobile_train"] if train else []) +
-               ([ROOT + ":flatbuffers_mobile"] if enable_flatbuffer else []),
+            # need absolute path here
+            ROOT + ":torch_mobile_core",
+            ROOT + ":aten_cpu",
+            ROOT + ":aten_metal_prepack_header",
+            third_party("glog"),
+            C10,
+        ] + ([ROOT + ":torch_mobile_train"] if train else []),
         **kwargs
     )
 
@@ -1166,15 +1164,17 @@ def define_buck_targets(
         ],
     )
 
+    torch_mobile_deserialize_common_srcs = [
+        "torch/csrc/jit/mobile/parse_bytecode.cpp",
+        "torch/csrc/jit/mobile/parse_operators.cpp",
+        "torch/csrc/jit/mobile/upgrader_mobile.cpp",
+        "torch/csrc/jit/serialization/import_read.cpp",
+        "torch/csrc/jit/serialization/unpickler.cpp",
+    ]
+
     pt_xplat_cxx_library(
         name = "torch_mobile_deserialize_common",
-        srcs = [
-            "torch/csrc/jit/mobile/parse_bytecode.cpp",
-            "torch/csrc/jit/mobile/parse_operators.cpp",
-            "torch/csrc/jit/mobile/upgrader_mobile.cpp",
-            "torch/csrc/jit/serialization/import_read.cpp",
-            "torch/csrc/jit/serialization/unpickler.cpp",
-        ],
+        srcs = torch_mobile_deserialize_common_srcs,
         header_namespace = "",
         exported_headers = [
             "torch/csrc/jit/serialization/import_read.h",
@@ -1302,12 +1302,14 @@ def define_buck_targets(
         name = "torch_mobile_deserialize",
         srcs = [
             "torch/csrc/jit/mobile/import.cpp",
+            "torch/csrc/jit/mobile/flatbuffer_loader.cpp",
         ],
         compiler_flags = get_pt_compiler_flags(),
-        exported_preprocessor_flags = get_pt_preprocessor_flags(),
+        exported_preprocessor_flags = get_pt_preprocessor_flags() + (["-DFB_XPLAT_BUILD"] if not IS_OSS else []),
         header_namespace = "",
         exported_headers = [
             "torch/csrc/jit/mobile/import.h",
+            "torch/csrc/jit/mobile/flatbuffer_loader.h",
         ],
         # torch_mobile_deserialize brings in sources neccessary to read a module
         # which depends on mobile module definition
@@ -1330,6 +1332,7 @@ def define_buck_targets(
             ":torch_mobile_module",
             ":torch_mobile_observer",
             ":torch_mobile_deserialize_common",
+            ":mobile_bytecode",
             C10,
         ],
     )
@@ -1387,13 +1390,45 @@ def define_buck_targets(
         ],
     )
 
+    torch_mobile_train_srcs = core_trainer_sources + [
+        "torch/csrc/autograd/VariableTypeManual.cpp",
+        "torch/csrc/autograd/FunctionsManual.cpp",
+        "torch/csrc/api/src/data/datasets/mnist.cpp",
+        "torch/csrc/jit/mobile/quantization.cpp",
+        "torch/csrc/jit/mobile/train/export_data.cpp",
+        "torch/csrc/jit/mobile/train/optim/sgd.cpp",
+        "torch/csrc/jit/mobile/train/random.cpp",
+        "torch/csrc/jit/mobile/train/sequential.cpp",
+        "torch/csrc/jit/serialization/flatbuffer_serializer.cpp",
+        ":gen_aten_libtorch[autograd/generated/Functions.cpp]",
+    ]
+
+    pt_xplat_cxx_library(
+        name = "torch_mobile_train",
+        srcs = torch_mobile_train_srcs,
+        compiler_flags = get_pt_compiler_flags(),
+        exported_preprocessor_flags = get_pt_preprocessor_flags() + ["-DUSE_MOBILE_CLASSTYPE"] +
+                                      (["-DFB_XPLAT_BUILD"] if not IS_OSS else []),
+        # torch_mobile_train brings in sources neccessary to read and run a mobile
+        # and save and load mobile params along with autograd
+        # link_whole is enabled so that all symbols linked
+        # operators, registerations and autograd related symbols are need in runtime
+        # @lint-ignore BUCKLINT link_whole
+        link_whole = True,
+        visibility = ["PUBLIC"],
+        deps = [
+            ":aten_cpu",
+            ":generated-autograd-headers",
+            ":torch_headers",
+            ":torch_mobile_deserialize",
+            ":mobile_bytecode",
+            C10,
+        ],
+    )
+
     pt_xplat_cxx_library(
         name = "torch_core",
-        srcs = core_sources_full_mobile_no_backend_interface + [
-            "torch/csrc/api/src/jit.cpp",
-            "torch/csrc/jit/serialization/export_bytecode.cpp",
-            "torch/csrc/jit/serialization/export_module.cpp",
-        ],
+        srcs = core_sources_full_mobile_no_backend_interface_xplat,
         compiler_flags = get_pt_compiler_flags(),
         exported_preprocessor_flags = get_pt_preprocessor_flags(),
         visibility = [
@@ -1442,37 +1477,7 @@ def define_buck_targets(
             ":torch_core",
             ":torch_mobile_deserialize",
             ":torch_mobile_train",
-            C10,
-        ],
-    )
-
-    pt_xplat_cxx_library(
-        name = "torch_mobile_train",
-        srcs = core_trainer_sources + [
-            "torch/csrc/autograd/VariableTypeManual.cpp",
-            "torch/csrc/autograd/FunctionsManual.cpp",
-            "torch/csrc/api/src/data/datasets/mnist.cpp",
-            "torch/csrc/jit/mobile/quantization.cpp",
-            "torch/csrc/jit/mobile/train/export_data.cpp",
-            "torch/csrc/jit/mobile/train/optim/sgd.cpp",
-            "torch/csrc/jit/mobile/train/random.cpp",
-            "torch/csrc/jit/mobile/train/sequential.cpp",
-            ":gen_aten_libtorch[autograd/generated/Functions.cpp]",
-        ],
-        compiler_flags = get_pt_compiler_flags(),
-        exported_preprocessor_flags = get_pt_preprocessor_flags() + ["-DUSE_MOBILE_CLASSTYPE"],
-        # torch_mobile_train brings in sources neccessary to read and run a mobile
-        # and save and load mobile params along with autograd
-        # link_whole is enabled so that all symbols linked
-        # operators, registerations and autograd related symbols are need in runtime
-        # @lint-ignore BUCKLINT link_whole
-        link_whole = True,
-        visibility = ["PUBLIC"],
-        deps = [
-            ":aten_cpu",
-            ":generated-autograd-headers",
-            ":torch_headers",
-            ":torch_mobile_deserialize",
+            ":jit_module_saving",
             C10,
         ],
     )
@@ -1562,15 +1567,16 @@ def define_buck_targets(
             "torch/csrc/jit/serialization/export_module.cpp",
         ],
         compiler_flags = get_pt_compiler_flags(),
-        exported_preprocessor_flags = get_pt_preprocessor_flags(),
+        exported_preprocessor_flags = get_pt_preprocessor_flags() +
+                                      (["-DFB_XPLAT_BUILD"] if not IS_OSS else []),
         exported_headers = [
             "torch/csrc/jit/serialization/export.h",
-            "torch/csrc/jit/serialization/flatbuffer_serializer_jit.h",
         ],
         visibility = ["PUBLIC"],
         deps = [
             ":torch",
             ":torch_mobile_core",
+            ":torch_mobile_train",
         ],
     )
 
@@ -1638,9 +1644,7 @@ def define_buck_targets(
         exported_deps = [
             ":aten_cpu",
             ":torch_common",
-        ] + ([] if IS_OSS else [
-            "//xplat/caffe2/fb/runtime:torch_mobile_deserialize_flatbuffer",
-        ]),
+        ],
     )
 
     fb_xplat_cxx_library(
@@ -1747,7 +1751,6 @@ def define_buck_targets(
 
     fb_xplat_cxx_library(
         name = "flatbuffers_serializer_mobile",
-        srcs = ["torch/csrc/jit/serialization/flatbuffer_serializer.cpp"],
         exported_headers = [
             "torch/csrc/jit/serialization/flatbuffer_serializer.h",
         ],
@@ -1765,14 +1768,13 @@ def define_buck_targets(
             C10,
         ],
         exported_deps = [
-            ":torch_mobile_train",
+            # ":torch_mobile_train",
         ],
     )
 
     pt_xplat_cxx_library(
         name = "flatbuffer_loader",
         srcs = [
-            "torch/csrc/jit/mobile/flatbuffer_loader.cpp",
         ],
         exported_headers = [
             "torch/csrc/jit/mobile/flatbuffer_loader.h",
@@ -1802,23 +1804,25 @@ def define_buck_targets(
             ":mobile_bytecode",
         ],
         exported_deps = [
-            ":torch_mobile_deserialize",
+            # ":torch_mobile_deserialize",
             C10,
         ],
     )
 
     fb_xplat_cxx_library(
         name = "flatbuffers_serializer_jit",
-        srcs = ["torch/csrc/jit/serialization/flatbuffer_serializer_jit.cpp"],
-        exported_headers = [
-            "torch/csrc/jit/serialization/flatbuffer_serializer_jit.h",
-        ],
         compiler_flags = [
             "-g0",
             "-O3",
             "-fexceptions",
             "-frtti",
             "-Wno-deprecated-declarations",
+        ],
+        headers = [
+            "torch/csrc/jit/serialization/flatbuffer_serializer_jit.h",
+        ],
+        srcs = [
+            "torch/csrc/jit/serialization/flatbuffer_serializer_jit.cpp",
         ],
         linker_flags = [
             "-Wl,--no-as-needed",
