@@ -1314,7 +1314,7 @@ def forward(self, a_1):
     clone = torch.ops.aten.clone.default(zeros);  zeros = None
     clone_1 = torch.ops.aten.clone.default(ones);  ones = None
     empty = torch.ops.aten.empty.memory_format([0], dtype = torch.uint8, layout = torch.strided, device = device(type='cpu'))
-    native_batch_norm = torch.ops.aten.native_batch_norm.default(a_1, None, None, clone, clone_1, False, 0.1, 1e-05);  a_1 = clone = clone_1 = None
+    native_batch_norm = torch.ops.aten.native_batch_norm.default(a_1, None, None, clone, clone_1, True, 0.1, 1e-05);  a_1 = clone = clone_1 = None
     getitem = native_batch_norm[0]
     getitem_1 = native_batch_norm[1]
     getitem_2 = native_batch_norm[2];  native_batch_norm = None
@@ -1332,7 +1332,7 @@ def forward(self, a_1):
     clone = torch.ops.aten.clone.default(zeros);  zeros = None
     clone_1 = torch.ops.aten.clone.default(ones);  ones = None
     empty = torch.ops.aten.empty.memory_format([0], dtype = torch.uint8, layout = torch.strided, device = device(type='cpu'))
-    native_batch_norm = torch.ops.aten.native_batch_norm.default(a_1, None, None, clone, clone_1, False, 0.1, 1e-05);  a_1 = clone = clone_1 = None
+    native_batch_norm = torch.ops.aten.native_batch_norm.default(a_1, None, None, clone, clone_1, True, 0.1, 1e-05);  a_1 = clone = clone_1 = None
     getitem = native_batch_norm[0]
     getitem_1 = native_batch_norm[1]
     getitem_2 = native_batch_norm[2];  native_batch_norm = None
