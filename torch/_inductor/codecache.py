@@ -218,12 +218,14 @@ def cpp_compile_command(input, output, include_pytorch=False):
     if valid_isa:
         macros = _SupportedVecIsa.vec_macro(valid_isa)
         macros = f"-D{macros}"
+        # This is needed in OSS, but breaks things in fbcode
+        include_pytorch = include_pytorch or hasattr(torch.version, "git_version")
     else:
         macros = ""
 
     if include_pytorch:
         lpaths = cpp_extension.library_paths() + [sysconfig.get_config_var("LIBDIR")]
-        libs = ["c10", "torch", "torch_cpu", "torch_python", "gomp"]
+        libs = ["torch", "gomp"]
     else:
         # Note - this is effectively a header only inclusion. Usage of some header files may result in
         # symbol not found, if those header files require a library.
@@ -245,6 +247,7 @@ def cpp_compile_command(input, output, include_pytorch=False):
             {ipaths} {lpaths} {libs} {macros}
             -march=native -O3 -ffast-math -fno-finite-math-only -fopenmp
             -D C10_USING_CUSTOM_GENERATED_MACROS
+            -Wl,-undefined -Wl,dynamic_lookup
             -o{output}
         """,
     ).strip()
