@@ -16,6 +16,9 @@
 #endif
 #if defined(__CUDACC__) || defined(__HIPCC__)
 #include <thrust/pair.h>
+#elif defined(__SYCL_DEVICE_ONLY__)
+#include <ATen/xpu/XPUPair.h>
+#define device_sqrt std::sqrt
 #else
 #include <cmath>
 #define device_sqrt std::sqrt
@@ -68,6 +71,8 @@ namespace detail {
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
 template <typename T1, typename T2> using pair = thrust::pair<T1, T2>;
+#elif defined(__SYCL_DEVICE_ONLY__)
+template <typename T1, typename T2> using pair = xpu::pair<T1, T2>;
 #else
 template <typename T1, typename T2> using pair = std::pair<T1, T2>;
 #endif
